@@ -1,0 +1,63 @@
+---
+title: "Assignment(1)"
+author: "Archana Gadicharla"
+date: "2024-02-02"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+netflix_india <- read.csv("C:\\Users\\archa\\Downloads\\archive (2)\\netflix_india_shows_seasons.csv")
+View(netflix_india)
+```
+This file has been imported from https://www.kaggle.com/datasets/jhajalaj/netflix-india-shows-and-movies
+
+```{r}
+mode(netflix_india$episode_count)
+```
+```{r}
+median(netflix_india$episode_count)
+```
+```{r}
+mean(netflix_india$episode_count)
+```
+```{r}
+max(netflix_india$episode_count)
+```
+```{r}
+sd(netflix_india$episode_count)
+```
+These values represent descriptive statistics for a selection of quantitave variables.
+The above values shows mode, median, maximum,and standard deviation for the quantitave variables.
+
+```{r}
+str(netflix_india$name)
+```
+These values represent categorical descriptive analysis of variables.
+```{r}
+netflix_india_transformed <-(netflix_india$episode_count - mean(netflix_india$episode_count)/median(netflix_india$episode_count))
+head(netflix_india_transformed)
+```
+Transformation of variables has been done above.
+```{r}
+hist(netflix_india$release_year)
+```
+The above graphical representation is a histogram.
+```{r}
+x <-netflix_india$release_year
+y <-netflix_india$episode_count
+plot(x,y, main="Scatterplot", xlab = "release_year", ylab = "episode_count" )
+```
+The above graphical representation is a scatterplot.
+The selected variables are episode_count and release_year.
+
+
+

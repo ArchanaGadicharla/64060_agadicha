@@ -1,0 +1,213 @@
+---
+title: "Assignment_5"
+author: "Archana Gadicharla"
+date: "2024-04-07"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+
+#Summary
+The assignment aims to perform hierarchical clustering on a dataset containing nutritional information, store display, and consumer ratings for 77 breakfast cereals (Cereals.csv). 
+
+
+#First, we will load all of the packages that will be required for this problem.
+
+```{r}
+#Displaying the required libraries
+library(cluster)
+library(caret)
+```
+```{r}
+library(dendextend)
+```
+```{r}
+library(knitr)
+library(factoextra)
+```
+```{r}
+library(readr)
+```
+
+
+#“Apply hierarchical clustering to the data using Euclidean distance to the normalized measurements. Use Agnes to compare the clustering from single linkage, complete linkage, average linkage, and Ward. Choose the best method.”
+
+```{r}
+#Creating a data collection that solely includes numbers by importing a dataset
+library(readr)
+
+#Next, we will import the “cereal” data set into the RStudio environment.
+SB_Cereals <- read.csv("C:\\Users\\archa\\Downloads\\Cereals.csv")
+Num_data <- data.frame(SB_Cereals[,4:16])
+```
+
+```{r}
+#Data lacking values should be removed
+Num_data <- na.omit(Num_data)
+```
+
+```{r}
+#Normalizing data
+SB_Cereals_normalise <- scale(Num_data)
+```
+
+```{r}
+#Use the normalized data to be hierarchical clustering using the Euclidean Dist technique.
+Dist <- dist(SB_Cereals_normalise, method = "euclidean")
+H_clust <- hclust(Dist, method = "complete")
+```
+
+```{r}
+#the dendogram plotting process.
+plot(H_clust, cex = 0.7, hang = -1)
+```
+```{r}
+#Clustering with single linkage, full linkage, and the Agnes function,average linkage and Ward.
+single_Hclust <- agnes(SB_Cereals_normalise, method = "single")
+complete_Hclust <- agnes(SB_Cereals_normalise, method = "complete")
+average_Hclust <- agnes(SB_Cereals_normalise, method = "average")
+ward_Hclust <- agnes(SB_Cereals_normalise, method = "ward")
+```
+
+```{r}
+#Choosing the most efficient course of action
+print(single_Hclust$ac)
+```
+```{r}
+print(complete_Hclust$ac)
+```
+```{r}
+print(average_Hclust$ac)
+```
+```{r}
+print(ward_Hclust$ac)
+```
+#The ward strategy is the most successful one, as shown by its value of 0.9046042, which is evident given the facts provided.
+
+2- #Choosing the clusters
+```{r}
+pltree(ward_Hclust, cex = 0.5, hang = -1, main = "Dendrogram of agnes (Using Ward)")
+rect.hclust(ward_Hclust, k = 5, border = 2:7)
+```
+```{r}
+S_Group <- cutree(ward_Hclust, k=5)
+D_frame_2 <- as.data.frame(cbind(SB_Cereals_normalise,S_Group))
+```
+
+```{r}
+fviz_cluster(list(data = D_frame_2, cluster = S_Group))
+```
+
+From the observation mentioned above, clusters can be selected.
+#determining the stability and structure of the clusters.
+
+```{r}
+#Building Partitions
+set.seed(123)
+One_partition <- Num_data[1:50,]
+Two_partition <- Num_data[51:74,]
+```
+
+```{r}
+#Performing Hierarchical Clustering while considering k = 5.
+single_sb <- agnes(scale(One_partition), method = "single")
+complete_sb <- agnes(scale(One_partition), method = "complete")
+average_sb <- agnes(scale(One_partition), method = "average")
+ward_sb <- agnes(scale(One_partition), method = "ward")
+cbind(single=single_sb$ac , complete=complete_sb$ac , average= average_sb$ac , ward= ward_sb$ac)
+```
+```{r}
+pltree(ward_sb, cex = 0.6, hang = -1, main = "Dendogram of Agnes with Partitioned Data (Using Ward)")
+rect.hclust(ward_sb, k = 5, border = 2:7)
+```
+```{r}
+cut_2 <- cutree(ward_sb, k = 5)
+```
+
+```{r}
+#the centroids are calculated.
+Sb_result <- as.data.frame(cbind(One_partition, cut_2))
+Sb_result[Sb_result$cut_2==1,]
+```
+```{r}
+one_centroid <- colMeans(Sb_result[Sb_result$cut_2==1,])
+Sb_result[Sb_result$cut_2==2,]
+```
+```{r}
+two_centroid <- colMeans(Sb_result[Sb_result$cut_2==2,])
+Sb_result[Sb_result$cut_2==3,]
+```
+```{r}
+three_centroid <- colMeans(Sb_result[Sb_result$cut_2==3,])
+Sb_result[Sb_result$cut_2==4,]
+```
+```{r}
+four_centroid <- colMeans(Sb_result[Sb_result$cut_2==4,])
+centroids <- rbind(one_centroid, two_centroid, three_centroid, four_centroid)
+x2 <- as.data.frame(rbind(centroids[,-14], Two_partition))
+```
+
+```{r}
+#figuring out the Dist.
+Dist_1 <- get_dist(x2)
+Matrix_1 <- as.matrix(Dist_1)
+dataframe1 <- data.frame(data=seq(1,nrow(Two_partition),1), Clusters = rep(0,nrow(Two_partition)))
+for(i in 1:nrow(Two_partition))
+{dataframe1[i,2] <- which.min(Matrix_1[i+4, 1:4])}
+dataframe1
+```
+```{r}
+cbind(D_frame_2$S_Group[51:74], dataframe1$Clusters)
+```
+```{r}
+table(D_frame_2$S_Group[51:74] == dataframe1$Clusters)
+```
+#12 of the above observations’ findings are false, while 12 are true. We may thus claim that the model is only partially unstable.
+
+3- The elementary public schools would like to choose a set of
+SB_Cereals to include in their daily cafeterias. A different
+cereal is offered daily, but all SB_Cereals should support a healthy diet.
+For this goal, you are requested to find a cluster of "healthy Cereals."
+
+```{r}
+#Clustering Healthy SB_Cereals.
+Healthy_SB_Cereals <- SB_Cereals
+Healthy_SB_Cereals_RD <- na.omit(Healthy_SB_Cereals)
+clust <- cbind(Healthy_SB_Cereals_RD, S_Group)
+clust[clust$S_Group==1,]
+```
+```{r}
+clust[clust$S_Group==2,]
+```
+```{r}
+clust[clust$S_Group==3,]
+```
+```{r}
+clust[clust$S_Group==4,]
+```
+```{r}
+#Mean ratings are used to select the best cluster.
+mean(clust[clust$S_Group==1,"rating"])
+```
+```{r}
+mean(clust[clust$S_Group==2,"rating"])
+```
+```{r}
+mean(clust[clust$S_Group==3,"rating"])
+```
+```{r}
+mean(clust[clust$S_Group==4,"rating"])
+```
+
+#Cluster 1 appears to be the best choice based on the data above, as it has the highest value. Therefore, Group 1 can be considered the optimal cluster for a healthy diet.
+
+
+ "To ensure we are offering a variety of healthy cereals for the daily cafeteria menu at elementary public schools, we are embarking on a crucial step-conducting a cluster analysis. This analysis, an essential part of our decision-making process, will help us group cereals that support a nutritious diet. We value your input and want to be able to offer a different cereal each day, but they all must contribute to a healthy diet.
+
+When considering the nutritional data of the cereals, normalizing the data would not be appropriate. This is because normalizing the data based on the sample of cereals being analyzed could result in misleading information. For example, if the dataset includes only cereals with very high sugar content and deficient fiber and iron, normalizing the data would not accurately represent the nutritional value of the cereals.
+
+A better approach for preprocessing the data would be to express the nutritional values as a ratio to the daily recommended calories, fiber, carbohydrates, etc., for a child. This method would allow us to make more informed decisions about the clusters without letting a few significant variables dominate the distance calculations.
+
+By reviewing the clusters and calculating their average nutritional contribution, we can determine what percentage of a student's daily recommended nutrition would come from each cereal. This will help the staff decide which cereals to include in the "healthy" cereal clusters.

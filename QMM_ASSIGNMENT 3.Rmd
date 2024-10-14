@@ -1,0 +1,220 @@
+---
+title: "QMM_ASSIGNMENT-3"
+author: "Archana Gadicharla"
+date: "2024-10-13"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###QUESTION
+###Heart Start produces automated external defibrillators (AEDs) in each of two different plants (A
+and B). The unit production costs and monthly production capacity of the two plants are
+indicated in the table below. The AEDs are sold through three wholesalers. The shipping cost
+from each plant to the warehouse of each wholesaler along with the monthly demand from each
+wholesaler are also indicated in the table. How many AEDs should be produced in each plant,
+and how should they be distributed to each of the three wholesaler warehouses so as to minimize
+the combined cost of production and shipping?
+Unit Shipping Cost Unit Monthly
+Warehouse 1 Warehouse 2 Warehouse 3 Production
+Cost
+Production
+Capacity
+Plant A $22 $14 $30 $600 100
+Plant B $16 $20 $24 $625 120
+Monthly
+Demand
+80 60 70
+Formulate and solve this transportation problem
+
+
+
+### Loading the libraries
+```{r}
+library(lpSolve)
+```
+
+
+
+# Creating a data frame for the Transportation  problem
+
+```{r}
+distribution_df <- data.frame(
+  Warehouse_alpha = c("$20", "$15", 85),
+  Warehouse_beta = c("$12", "$18", 65),
+  Warehouse_gamma = c("$28", "$26", 75),
+  Unit_Cost_of_Production = c("$580", "$620", " "),
+  Maximum_Monthly_Output = c(105, 125, " ")
+)
+rownames(distribution_df) <- c("Plant A", "Plant  B", "Monthly_Requirement")
+
+# Generating a formatted table
+library(knitr)
+#install.packages("kableExtra")
+library(kableExtra)
+
+distribution_df %>%
+  kable() %>%
+  kable_classic() %>%
+  column_spec(1, border_right = TRUE) %>%
+  column_spec(4, border_right = TRUE) %>%
+  row_spec(2, extra_css = "border-bottom:dotted") %>%
+  add_header_above(header = c(" " = 1, "Shipping Cost per Unit" = 3, " " = 2))
+
+```
+
+
+Problem Overview:
+Production Sites: Plant A and Plant B
+Distribution Centers: Warehouse-1, Warehouse-2, Warehouse-3
+
+Production Costs:
+Plant A: $600 per unit produced
+Plant B: $625 per unit produced
+
+Shipping Costs:
+From Plant A to:
+Warehouose-1: $22
+Warehouse-2: $14
+Warehouse-3: $30
+From Plant B to:
+Warehouse-1: $16
+Warehouse-2: $20
+Warehouse-3: $24
+
+Monthly Production Limits:
+Plant A: 100 units maximum
+Plant B: 120 units maximum
+
+Monthly Demand:
+Warehouse-1: 80 units required
+Warehouse-2: 60 units required
+Warehouse-3: 70 units required
+
+Decision Variables:
+Let Y11, Y12, Y13 denote the number of units transported from Plant A to Warehouses 1, 2, and 3, respectively. Similarly,
+Let Y21, Y22 And Y23 denote the number of units shipped from Plant B to the same Warehouses.
+
+Objective Function:
+Our goal is to minimize the combined costs of production and transportation, expressed as follows:
+Minimize 
+𝐶=(600+22)𝑌11+(600+14)𝑌12+(600+30)𝑌13+(625+16)𝑌21+(625+20)𝑌22+(625+24)Y23C=(600+22)Y11+(600+14)Y12+(600+30)Y 13+(625+16)Y21+(625+20)Y22+(625+24)Y23
+
+Simplified, this becomes:
+Minimize 𝐶=622𝑌11+614𝑌12+630𝑌13+641𝑌21+645𝑌22+649𝑌23C=622Y 11+614 Y12+630 Y13+641 Y21+645 Y22+649 Y23
+
+Constraints:
+(1) Production Capacity Constraints:
+Y11+Y12+Y13 ≤100 (Capacity limit for Plant A)
+Y21+Y22+Y23 ≤120 (Capacity limit for Plant B)
+
+(2) Demand Constraints:
+Y11+Y21 ≥ 80 (Demand at Warehouse 1)
+Y12+22 ≥ 60 (Demand at Warehouse 2)
+Y13+23 ≥ 70 (Demand at Warehouse 3)
+
+(3)Non-Negativity Constraints:
+Yij ≥ 0 for all i,j
+
+
+
+# Defining the combined costs for production and delivery.
+# Decision variable order is as follows:
+
+```{r}
+# [Plant A to Warehouse1, Plant A to Warehouse2, Plant A to Warehouse3, 
+#  Plant B to Warehouse1, Plant B to Warehouse2, Plant B to Warehouse3]
+delivery_expenses <- c(600 + 22, 600 + 14, 600 + 30, 
+                       625 + 16, 625 + 20, 625 + 24)
+```
+
+
+
+# Creating a matrix to represent all constraints for the optimization model.
+# Each row represents a specific constraint: 
+
+```{r}
+# 1) Plant A capacity, 2) Plant B capacity
+# 3) Warehouse 1 demand, 4) Warehouse 2 demand, 5) Warehouse 3 demand
+constraint_matrix <- matrix(c(1, 1, 1, 0, 0, 0,   # Capacity of Plant A
+                              0, 0, 0, 1, 1, 1,   # Capacity of plant B
+                              1, 0, 0, 1, 0, 0,   # Demand at the warehouse 1
+                              0, 1, 0, 0, 1, 0,   # Demand at the warehouse 2
+                              0, 0, 1, 0, 0, 1),  # Demand at the warehouse 3
+                            nrow = 5, byrow = TRUE)
+
+
+```
+
+
+
+# Setting the right-hand side values for each constraint
+# These values correspond to maximum production capacities and required demand levels
+
+```{r}
+rhs_values <- c(100, 120, 80, 60, 70)  # Capacity limits and demand requirements
+```
+
+
+
+# Defining the inequality directions for each constraint
+# "≤" for production capacity constraints, "=" for the distribution center demand requirements
+
+```{r}
+constraint_directions <- c("<=", "<=", "=", "=", "=")
+```
+
+
+# Solving the allocation optimization problem using the lp() function
+
+```{r}
+optimal_solution <- lp("min", delivery_expenses, constraint_matrix, constraint_directions, rhs_values)
+optimal_solution
+```
+
+
+# Outputting the results
+
+```{r}
+if (optimal_solution$status == 0) 
+  # If an optimal solution is identified, display the results
+  print("Optimal solution found:")
+  optimal_solution$allocation_matrix <- matrix(optimal_solution$solution, nrow = 2, byrow = TRUE)
+  rownames(optimal_solution$allocation_matrix) <- c("Plant A", "Plant B")
+  colnames(optimal_solution$allocation_matrix) <- c("Warehouse1", "Warehouse2 ", "Warehouse3")
+  print(optimal_solution$allocation_matrix)
+```
+
+
+# Determining the total quantity of AEDs to be manufactured by Plant A
+
+```{r}
+total_Facility_X <- sum(optimal_solution$allocation_matrix["Plant A", ])
+print(paste("Number of devices to be produced by Facility_X: ", total_Facility_X))
+```
+
+
+# Determining the total quantity of devices to be manufactured by Plant B
+```{r}
+total_Facility_Y <- sum(optimal_solution$allocation_matrix["Plant B", ])
+print(paste("Number of devices to be produced by Facility_Y: ", total_Facility_Y))
+```
+
+
+# Output the minimum total cost achieved
+```{r}
+print(paste("Minimized total cost: $", optimal_solution$objval))
+```
+
+
+# Overall cost
+```{r}
+print(paste(optimal_solution$objval))
+```
+
+### CONCLUSION
+The transportation model for Medical Pulse has been successfully optimized using linear programming, allowing for the cost-effective distribution of life-saving devices from two facilities to three distribution centers. Facility Plant A will produce 100 units, while Facility Plant B will produce 120 units, satisfying all monthly demand requirements while adhering to production capacity constraints. The resulting minimized total cost for both production and shipping is $132,790, highlighting the efficiency gains achieved through this model. This optimized approach not only streamlines Medical Pulse's logistics operations but also enhances resource allocation and cost savings. By reducing operational expenses and meeting customer demand reliably, Medical Pulse strengthens its competitive position in the healthcare market, enabling it to deliver essential devices more effectively.

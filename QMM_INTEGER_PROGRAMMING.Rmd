@@ -1,0 +1,196 @@
+---
+title: "QMM_Integer Programming"
+author: "Archana Gadicharla"
+date: "2024-11-15"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+#Loading the required packages
+
+```{r}
+library(dplyr)
+library(kableExtra)
+library(igraph)
+```
+
+
+#Problem Statement:
+#AP is a shipping service that guarantees overnight delivery of packages in the continental US.The company has various hubs at major cities and airports across the country. Packages arereceived at hubs, and then shipped to intermediate hubs or to their final destination.The manager of the AP hub in Cleveland is concerned about labor costs, and is interested indetermining the most effective way to schedule workers. The hub operates seven days a week,and the number of packages it handles varies from one day to another. The table below providesan estimate of the number of workers needed each day of the week.
+
+
+
+```{r}
+x <- matrix(c("Sunday","Monday","Tuesday","Wednesday","Thursday", "Friday", "Saturday",
+18,27,22,26,25,21,19), ncol=2, byrow=F)
+colnames(x) <- c("Day", "Workers_Required")
+AP_hub <- as.table(x)
+```
+
+
+```{r}
+AP_hub%>%
+ kable()%>%
+ kable_classic()%>%
+ column_spec(2,border_left = TRUE) %>% 
+add_header_above(c("Table 1 :Number of workers needed each day of the week" = 3))
+```
+
+
+#Package handlers at AP are guaranteed a five-day work week with two consecutive days off. The base wage for the handlers is $750 per week. Workers working on Saturday or Sunday receive an additional $25 per day. The possible shifts and salaries for package handlers are:
+
+
+```{r}
+x <- matrix(c(1,2,3,4,5,6,7,
+  "Sunday & Monday","Monday & Tuesday","Tuesday & Wednesday","Wednesday & Thursday","Thursday & Friday", "Friday & Saturday", "Saturday & Sunday",
+775,800,800,800,800,775,750), ncol=3, byrow=F)
+colnames(x) <- c("Shift","Days Off", "Wage $")
+Shift_Salary <- as.table(x)
+```
+
+
+
+```{r}
+Shift_Salary %>%
+ kable() %>%
+ kable_classic() %>%
+ column_spec(2,border_left = TRUE) %>% 
+add_header_above(c("Table 2: The base wage for the handlers" = 4))
+```
+
+
+#The manager wants to keep the total wage expenses as low as possible while ensuring that thereare sufficient number of workers available each day. 
+
+QUESTION-1: Formulate and solve the problem?
+
+#The Objective function is to minimize the total wage expenses
+$$MINZ=775X1+800X2+800X3+800X4+800X5+775X6+750X7$$
+
+#Constraints would be:
+
+Sunday:
+
+$$X2+X3+X4+X5+X6≥18$$
+
+Monday:
+
+$$X3+X4+X5+X6+X7≥27$$
+
+
+Tuesday:
+
+$$X4+X5+X6+X7+X1≥22$$
+
+
+Wednesday:
+
+$$X5+X6+X7+X1+X2≥26$$
+
+
+Thursday:
+
+$$X6+X7+X1+X2+X3≥25$$
+
+Friday:
+
+$$X7+X1+X2+X3+X4≥21$$
+
+
+Saturday:
+
+$$X1+X2+X3+X4+X5≥19$$
+
+Non-negative integers Xi
+
+$$Xi≥0,i=1,2,3,4,5,6,7$$
+
+
+The workforce size needed for shift *i* is represented by *Xi*, and *Z* denotes the weekly compensation cost. Constraints are applied to ensure adequate staffing levels for each day of the week.
+
+
+#Solve the problem 
+
+```{r}
+library(lpSolveAPI)
+library(readr)
+lp_Content<- "min:775x1+800x2+800x3+800x4+800x5+775x6+750x7;
+Sunday: x2 + x3 + x4 + x5 + x6 >= 18;
+Monday: x3 + x4 + x5 + x6 + x7 >= 27;
+Tuesday: x1 + x4 + x5 + x6 + x7 >= 22;
+Wednesday: x1 + x2 + x5 + x6 + x7 >= 26;
+Thursday: x1 + x2 + x3 + x6 + x7 >= 25;
+Friday: x1 + x2 + x3 + x4 + x7 >= 21;
+Saturday: x1 + x2 + x3 + x4 + x5 >= 19;
+int x1, x2, x3, x4, x5, x6, x7;"
+writeLines(lp_Content, "AP_IntegerProgramming.lp")
+
+library(lpSolveAPI)
+AP_IP<- read.lp("AP_IntegerProgramming.lp")
+AP_IP
+```
+
+
+```{r}
+solve(AP_IP)
+```
+
+
+```{r}
+get.objective(AP_IP)
+```
+
+```{r}
+get.variables(AP_IP)
+```
+
+The optimal solution is Z=25675 with X1=2,X2=4,X3=5,X4=0,X5=8,X6=1 and X7=13.
+
+
+#QUESTION-2: What was the total cost?
+
+```{r}
+paste("The minimum total wage expense is $" ,get.objective(AP_IP))
+```
+
+```{r}
+paste("Total numbers of workers available on Sunday is" ,sum(get.variables(AP_IP)[c(2,3,4,5,6)]))
+```
+
+```{r}
+paste("Total numbers of workers available on Monday is" ,sum(get.variables(AP_IP)[c(3,4,5,6,7)]))
+```
+```{r}
+paste("Total numbers of workers available on Tuesday is" ,sum(get.variables(AP_IP)[c(4,5,6,7,1)]))
+```
+
+```{r}
+paste("Total numbers of workers available on Wednesday is" ,sum(get.variables(AP_IP)[c(5,6,7,1,2)]))
+```
+
+```{r}
+paste("Total numbers of workers available on Thursday is" ,sum(get.variables(AP_IP)[c(6,7,1,2,3)]))
+```
+
+```{r}
+paste("Total numbers of workers available on Friday is" ,sum(get.variables(AP_IP)[c(7,1,2,3,4)]))
+```
+
+```{r}
+paste("Total numbers of workers available on Saturday is" ,sum(get.variables(AP_IP)[c(1,2,3,4,5)]))
+```
+
+#QUESTION-3: How many workers are available each day?
+
+```{r}
+Workers_each_day <- data.frame(Day = c("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"),Workers_Available = c(18,27,22,26,25,21,19))
+Workers_each_day %>% 
+ kable()%>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+add_header_above(c("Table 3 : Number of workers Available each Day" = 2))
+```
+
+###CONCLUSION
+
+This model aims to balance two objectives: to minimize the compensation cost Z while at the same time ensuring that on each day of the week, the number of active workforce Xi is at least equal to the minimum workforce required. In this regard, Cleveland will achieve a work force planning that is economically viable as well as operationally efficient. In this light, application of such an integer programming model should yield a strong decision tool in scheduling for logistics operations.
